@@ -1,0 +1,50 @@
+# ---> WebMethods
+**/IntegrationServer/datastore/
+**/IntegrationServer/db/
+**/IntegrationServer/DocumentStore/
+**/IntegrationServer/lib/
+**/IntegrationServer/logs/
+**/IntegrationServer/replicate/
+**/IntegrationServer/sdk/
+**/IntegrationServer/support/
+**/IntegrationServer/update/
+**/IntegrationServer/userFtpRoot/
+**/IntegrationServer/web/
+**/IntegrationServer/WmRepository4/
+**/IntegrationServer/XAStore/
+**/IntegrationServer/packages/Wm*/
+
+# ---> C++
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
