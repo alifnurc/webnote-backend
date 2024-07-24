@@ -48,3 +48,5 @@
 *.out
 *.app
 
+# Builds
+build/
