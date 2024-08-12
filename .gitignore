@@ -72,5 +72,5 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Vcpkg
-vcpkg.*.log
+vcpkg*.log
 vcpkg_installed/
