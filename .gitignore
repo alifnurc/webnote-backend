@@ -70,3 +70,7 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Vcpkg
+vcpkg.*.log
+vcpkg_installed/
