@@ -40,5 +40,23 @@ int main(int argc, char *argv[]) {
       .prefix("/")
       .origin("http://localhost:8080")
       .allow_credentials();
+
+  CROW_ROUTE(app, "/signup")
+      .methods(crow::HTTPMethod::POST)([](const crow::request &req) {
+        // Reference:
+        // https://crowcpp.org/1.0/guides/multipart
+        crow::multipart::message multipart(req);
+
+        wnt::User user;
+        std::string password;
+
+        return crow::response(200, "OK");
+      });
+
+  // Log level is set to DEBUG.
+  app.loglevel(crow::LogLevel::DEBUG);
+
+  // Set up port, set the app to run in multithread and run the app.
+  app.bindaddr("127.0.0.1").port(5000).multithreaded().run();
   return 0;
 }
