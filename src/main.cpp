@@ -16,12 +16,12 @@ struct logRequest {
   struct context {};
 
   // called before the handle.
-  void beforeHandle(crow::request &req, crow::response &res, context &ctx) {
+  void before_handle(crow::request &req, crow::response &res, context &ctx) {
     CROW_LOG_DEBUG << "Before request handle: " + req.url;
   }
 
   // called after the handle.
-  void afterHandle(crow::request &req, crow::response &res, context &ctx) {
+  void after_handle(crow::request &req, crow::response &res, context &ctx) {
     CROW_LOG_DEBUG << "After request handle: " + req.url;
   }
 };
