@@ -22,16 +22,21 @@ bool create_new_account(const User &user, const std::string &password) {
     std::stringstream s;
     s << "INSERT INTO userwebnote(username, password, account_birth) "
          "VALUES("
-      << transaction.quote(user.username) << ',' << transaction.quote(password)
-      << ',' << transaction.quote(user.account_birth)
-      << ", generate_salt('bf', )), now())";
+      << transaction.quote(user.username) << ", crypt("
+      << transaction.quote(password) << ", gen_salt('bf', 5)), now())";
+
     const std::string query = s.str();
-    CROW_LOG_DEBUG << "Query: " << query;
+
+    // Debug query.
+    CROW_LOG_DEBUG << "Query: " + query;
+
+    // Exec query and insert it to database.
     auto result = transaction.exec(query);
-    if (result.affected_rows() != 1) {
+    if (result.affected_rows() != 1) { // number of rows affected.
       CROW_LOG_ERROR << "Could not insert user to database";
       return false;
     }
+
     transaction.commit();
     return true;
   } catch (const pqxx::sql_error &e) {
