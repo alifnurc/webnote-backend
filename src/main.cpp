@@ -26,6 +26,10 @@ struct logRequest {
   }
 };
 
+// Get message from multipart/form-data.
+static bool isStringPresent(const crow::multipart::message &messages,
+                            const char *key, std::string &part_message);
+
 int main(int argc, char *argv[]) {
   // Define app and use middleware.
   crow::App<logRequest, crow::CORSHandler> app;
@@ -43,9 +47,7 @@ int main(int argc, char *argv[]) {
 
   CROW_ROUTE(app, "/signup")
       .methods(crow::HTTPMethod::POST)([](const crow::request &req) {
-        // Reference:
-        // https://crowcpp.org/1.0/guides/multipart
-        crow::multipart::message multipart(req);
+        crow::multipart::message messages(req);
 
         wnt::User user;
         std::string password;
@@ -59,4 +61,16 @@ int main(int argc, char *argv[]) {
   // Set up port, set the app to run in multithread and run the app.
   app.bindaddr("127.0.0.1").port(5000).multithreaded().run();
   return 0;
+}
+
+// Reference:
+// https://crowcpp.org/1.0/guides/multipart
+static bool isStringPresent(const crow::multipart::message &messages,
+                            const char *key, std::string &part_message) {
+  auto i = messages.part_map.find(key);
+  if (i == messages.part_map.end() || i->second.body.empty()) {
+    return false;
+  }
+  part_message = i->second.body;
+  return true;
 }
