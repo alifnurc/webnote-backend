@@ -52,6 +52,24 @@ int main(int argc, char *argv[]) {
         wnt::User user;
         std::string password;
 
+        // form fields.
+        if (!isStringPresent(messages, "username", user.username)) {
+          return crow::response(
+              crow::BAD_REQUEST,
+              "Required field is missing or empty: 'username'");
+        }
+        if (!isStringPresent(messages, "password", password)) {
+          return crow::response(
+              crow::BAD_REQUEST,
+              "Required field is missing or empty: 'password'");
+        }
+
+        if (!wnt::create_new_account(user, password)) {
+          return crow::response(
+              crow::INTERNAL_SERVER_ERROR,
+              wnt::printError(wnt::ErrorCode::INTERNAL_ERROR));
+        }
+
         return crow::response(200, "OK");
       });
 
