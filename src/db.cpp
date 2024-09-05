@@ -44,4 +44,39 @@ bool create_new_account(const User &user, const std::string &password) {
     return false;
   }
 }
+
+bool is_valid_password(const std::string &password_input,
+                       const std::string &stored_password) {
+  pqxx::connection c(url);
+  pqxx::read_transaction transaction(c);
+
+  try {
+    std::stringstream s;
+    s << "SELECT (CASE WHEN crypt(" << transaction.quote(password_input) << ","
+      << transaction.quote(stored_password)
+      << ") = " << transaction.quote(stored_password)
+      << " THEN true ELSE false END) AS is_equal";
+
+    std::string query = s.str();
+
+    // Debug query.
+    CROW_LOG_DEBUG << "Query: " + query;
+
+    // Get result of query.
+    bool is_match_password = transaction.query_value<bool>(query);
+
+    transaction.commit();
+    return is_match_password;
+  } catch (const pqxx::unexpected_rows &e) {
+    CROW_LOG_ERROR << "Number of rows returned is not equal to 1: " << e.what();
+    return false;
+  } catch (const pqxx::usage_error &e) {
+    CROW_LOG_ERROR << "Number of columns returned is not equal to 1: "
+                   << e.what();
+    return false;
+  } catch (const pqxx::sql_error &e) {
+    CROW_LOG_ERROR << "Internal exception was thrown: " << e.what();
+    return false;
+  }
+}
 } // namespace wnt
