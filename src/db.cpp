@@ -79,4 +79,23 @@ bool is_valid_password(const std::string &password_input,
     return false;
   }
 }
+
+std::variant<User, ErrorCode> get_user(const std::string &username) {
+  pqxx::connection c(url);
+  pqxx::read_transaction transaction(c);
+
+  try {
+    // Search user from database.
+    auto row = transaction.exec1("SELECT * FROM userwebnote WHERE username=" +
+                                 transaction.quote(username));
+    transaction.commit();
+
+    return User{.username = row["username"].c_str(),
+                .password = row["password"].c_str(),
+                .account_birth = row["account_birth"].c_str()};
+  } catch (const pqxx::unexpected_rows &e) {
+    CROW_LOG_ERROR << "Number of rows returned is not equal to 1: " << e.what();
+    return ErrorCode::INTERNAL_ERROR;
+  }
+}
 } // namespace wnt
