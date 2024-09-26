@@ -1,14 +1,19 @@
 #include "db.h"
 
+#include <chrono>
 #include <crow.h>
 #include <crow/app.h>
 #include <crow/common.h>
 #include <crow/http_request.h>
 #include <crow/http_response.h>
+#include <crow/json.h>
 #include <crow/logging.h>
 #include <crow/middlewares/cors.h>
 #include <crow/multipart.h>
+#include <jwt-cpp/jwt.h>
+#include <jwt-cpp/traits/kazuho-picojson/defaults.h>
 #include <string>
+#include <variant>
 
 // References:
 // https://crowcpp.org/master/guides/middleware
@@ -71,6 +76,75 @@ int main(int argc, char *argv[]) {
         }
 
         return crow::response(200, "OK");
+      });
+
+  CROW_ROUTE(app, "/signin")
+      .methods(crow::HTTPMethod::POST)([](const crow::request &req) {
+        // Request body validation.
+        const auto &headers = req.headers.find("Content-Length");
+        if (headers == req.headers.end()) {
+          return crow::response(crow::BAD_REQUEST,
+                                "Missing Content-Length header");
+        }
+
+        // Request body length validation.
+        if (req.body.size() <= 23) {
+          return crow::response(crow::status::BAD_REQUEST,
+                                "Request body too short");
+        }
+
+        // Request body json validation.
+        crow::json::rvalue body_json =
+            crow::json::load(req.body.c_str(), req.body.size());
+        if (body_json.error()) {
+          return crow::response(crow::status::BAD_REQUEST,
+                                "Request body is not JSON");
+        }
+
+        // Request body fields validation.
+        if (!body_json.has("username") || !body_json.has("password") ||
+            body_json["username"].s().size() == 0 ||
+            body_json["password"].s().size() == 0) {
+          return crow::response(crow::status::BAD_REQUEST,
+                                "Missing username and/or password");
+        }
+
+        // Get credentials from request body.
+        const std::string username = body_json["username"].s();
+        const std::string password = body_json["password"].s();
+
+        // Check username if exists.
+        auto result = wnt::get_user(username);
+        if (std::holds_alternative<wnt::ErrorCode>(result)) {
+          return crow::response(
+              crow::status::UNAUTHORIZED,
+              wnt::printError(std::get<wnt::ErrorCode>(result)));
+        }
+
+        // Check password if valid.
+        const auto &user = std::get<wnt::User>(result);
+        if (!wnt::is_valid_password(password, user.password)) {
+          return crow::response(
+              crow::status::UNAUTHORIZED,
+              wnt::printError(wnt::ErrorCode::AUTHENTICATION_ERROR));
+        }
+
+        // Create a token for user authentication, contains user data and is
+        // valid for one hour.
+        auto current_time = std::chrono::system_clock::now();
+        auto token =
+            jwt::create()
+                .set_issuer("WNT")
+                .set_type("JWS")
+                .set_issued_at(current_time)
+                .set_expires_at(current_time + std::chrono::seconds{3600})
+                .set_payload_claim("username", jwt::claim(user.username))
+                .sign(jwt::algorithm::hs512{"secret"});
+
+        // Prepare response with access token and username for client side.
+        crow::json::wvalue response{{"access_token", token},
+                                    {"username", user.username}};
+        return crow::response(crow::status::OK, response);
       });
 
   // Log level is set to DEBUG.
