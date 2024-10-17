@@ -98,4 +98,31 @@ std::variant<User, ErrorCode> get_user(const std::string &username) {
     return ErrorCode::INTERNAL_ERROR;
   }
 }
+
+bool add_note(const Note &note) {
+  pqxx::connection c(url);
+  pqxx::work transaction(c);
+
+  try {
+    std::stringstream s;
+    s << "INSERT INTO datawebnote(username, title, description, creation_date, "
+         "last_update_date) VALUES("
+      << transaction.quote(note.username) << ','
+      << transaction.quote(note.title) << ','
+      << transaction.quote(note.description) << ", now(), now())";
+
+    // Exec query and insert it to database.
+    auto result = transaction.exec(s.str());
+    if (result.affected_rows() != 1) { // number of rows affected.
+      CROW_LOG_ERROR << "Could not insert note to database";
+      return false;
+    }
+
+    transaction.commit();
+    return true;
+  } catch (const pqxx::sql_error &e) {
+    CROW_LOG_ERROR << "Internal exception was thrown: " << e.what();
+    return false;
+  }
+}
 } // namespace wnt

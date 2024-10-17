@@ -9,4 +9,5 @@ bool create_new_account(const User &user, const std::string &password);
 bool is_valid_password(const std::string &password_input,
                        const std::string &stored_password);
 std::variant<User, ErrorCode> get_user(const std::string &username);
+bool add_note(const Note &note);
 } // namespace wnt
