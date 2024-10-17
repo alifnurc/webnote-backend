@@ -151,6 +151,39 @@ int main(int argc, char *argv[]) {
         return crow::response(crow::status::OK, response);
       });
 
+  CROW_ROUTE(app, "/addnote")
+      .methods(crow::HTTPMethod::POST)([](const crow::request &req) {
+        wnt::Note note;
+      // verify authorization header.
+        if (!isHeaderVerified(req, note.username)) {
+          return crow::response(
+              crow::status::UNAUTHORIZED,
+              wnt::printError(wnt::ErrorCode::AUTHENTICATION_ERROR));
+        }
+
+        crow::multipart::message messages(req);
+        /*return crow::response(crow::status::OK);*/
+
+        // Form fields validation.
+        if (!isStringPresent(messages, "note_title", note.title)) {
+          return crow::response(
+              crow::status::BAD_REQUEST,
+              "Required field is missing or empty: 'title note'");
+        }
+        if (!isStringPresent(messages, "note_description", note.description)) {
+          return crow::response(
+              crow::status::BAD_REQUEST,
+              "Required field is missing or empty: 'description note'");
+        }
+
+        if (!wnt::add_note(note)) {
+          return crow::response(
+              crow::status::INTERNAL_SERVER_ERROR,
+              wnt::printError(wnt::ErrorCode::INTERNAL_ERROR));
+        }
+        return crow::response(crow::status::OK);
+      });
+
   // Log level is set to DEBUG.
   app.loglevel(crow::LogLevel::DEBUG);
 
