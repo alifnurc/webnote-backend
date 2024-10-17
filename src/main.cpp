@@ -12,6 +12,7 @@
 #include <crow/multipart.h>
 #include <jwt-cpp/jwt.h>
 #include <jwt-cpp/traits/kazuho-picojson/defaults.h>
+#include <regex>
 #include <string>
 #include <variant>
 
@@ -30,6 +31,9 @@ struct logRequest {
     CROW_LOG_DEBUG << "After request handle: " + req.url;
   }
 };
+
+// Authorization header validation.
+static bool isHeaderVerified(const crow::request &req, std::string &username);
 
 // Get message from multipart/form-data.
 static bool isStringPresent(const crow::multipart::message &messages,
@@ -164,5 +168,48 @@ static bool isStringPresent(const crow::multipart::message &messages,
     return false;
   }
   part_message = i->second.body;
+  return true;
+}
+
+// Verify header and extract username.
+static bool isHeaderVerified(const crow::request &req, std::string &username) {
+  // Try to find Authorization header in request.
+  const auto &headers = req.headers.find("Authorization");
+  if (headers == req.headers.end()) {
+    CROW_LOG_ERROR << "Request header does not contain Authorization";
+    return false;
+  }
+
+  // Extract the value of Authorization header.
+  const std::string &authorization_value = headers->second;
+  // This pattern expects "Bearer <token>", where <token> is a string of allowed characters.
+  std::regex bearer_scheme_regex("Bearer +([A-Za-z0-9_\\-.~+]+[=]*)");
+
+  // Attempt to match the Authorization header value with the bearer token pattern.
+  std::smatch match;
+  if (!std::regex_match(authorization_value, match, bearer_scheme_regex)) {
+    CROW_LOG_ERROR << "Request header Authorization does not contain Bearer";
+    return false;
+  }
+
+  // Decode the Bearer token (found in the regex match).
+  auto decade = jwt::decode(match[1].str());
+  // Set up a JWT verifier.
+  // The algorithm is set to HS512 and the issuer is set to WNT.
+  auto verifier = jwt::verify()
+    .allow_algorithm(jwt::algorithm::hs512{"secret"})
+    .with_issuer("WNT");
+
+  // Try to verify the token.
+  // If the token is not valid, an exception will be thrown.
+  try {
+  verifier.verify(decade);
+  } catch (const std::exception &e) {
+    CROW_LOG_ERROR << "Failed to verify token: " << e.what();
+    return false;
+  }
+
+  // If the token is valid, extract the username from the token.
+  username = decade.get_payload_claim("username").as_string();
   return true;
 }
