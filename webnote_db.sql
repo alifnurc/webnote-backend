@@ -16,3 +16,17 @@ CREATE FUNCTION public.fn_trig_notes_id() RETURNS trigger
   ;
 
 ALTER FUNCTION public.fn_trig_notes_id() OWNER TO hitagi;
+
+SET default_tablespace = '';
+SET default_table_access_method = heap;
+
+CREATE TABLE public.datawebnote (
+  username character varying(40) NOT NULL,
+  title character varying(100) NOT NULL,
+  description character varying(2000) NOT NULL,
+  id bigint NOT NULL,
+  creation_date timestamp with time zone DEFAULT now() NOT NULL,
+  last_update_date timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.datawebnote OWNER TO hitagi;
