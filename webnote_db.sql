@@ -30,3 +30,17 @@ CREATE TABLE public.datawebnote (
 );
 
 ALTER TABLE public.datawebnote OWNER TO hitagi;
+
+CREATE TABLE public.userwebnote (
+  username character varying(40) NOT NULL,
+  password character varying(100) NOT NULL,
+  account_birth timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.userwebnote OWNER TO hitagi;
+
+ALTER TABLE ONLY public.userwebnote
+  ADD CONSTRAINT userwebnote_pkey PRIMARY KEY (id, username);
+
+ALTER TABLE ONLY public.userwebnote
+   ADD CONSTRAINT unique_username UNIQUE (username);
