@@ -51,3 +51,6 @@ CREATE TRIGGER trig_notes_id
   ON public.datawebnote
   FOR EACH ROW
   EXECUTE PROCEDURE public.fn_trig_notes_id();
+
+  ALTER TABLE ONLY public.datawebnote
+    ADD CONSTRAINT datawebnote_username_fkey FOREIGN KEY (username) REFERENCES public.userwebnote(username);
