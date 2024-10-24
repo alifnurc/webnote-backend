@@ -44,3 +44,10 @@ ALTER TABLE ONLY public.userwebnote
 
 ALTER TABLE ONLY public.userwebnote
    ADD CONSTRAINT unique_username UNIQUE (username);
+
+-- Function trigger before insert for auto generate new id
+CREATE TRIGGER trig_notes_id
+  BEFORE INSERT
+  ON public.datawebnote
+  FOR EACH ROW
+  EXECUTE PROCEDURE public.fn_trig_notes_id();
