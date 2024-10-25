@@ -10,10 +10,12 @@
 #include <crow/logging.h>
 #include <crow/middlewares/cors.h>
 #include <crow/multipart.h>
+#include <crow/query_string.h>
 #include <jwt-cpp/jwt.h>
 #include <jwt-cpp/traits/kazuho-picojson/defaults.h>
 #include <regex>
 #include <string>
+#include <utility>
 #include <variant>
 
 // References:
@@ -154,7 +156,7 @@ int main(int argc, char *argv[]) {
   CROW_ROUTE(app, "/addnote")
       .methods(crow::HTTPMethod::POST)([](const crow::request &req) {
         wnt::Note note;
-      // verify authorization header.
+        // verify authorization header.
         if (!isHeaderVerified(req, note.username)) {
           return crow::response(
               crow::status::UNAUTHORIZED,
@@ -182,6 +184,55 @@ int main(int argc, char *argv[]) {
               wnt::printError(wnt::ErrorCode::INTERNAL_ERROR));
         }
         return crow::response(crow::status::OK);
+      });
+
+  CROW_ROUTE(app, "/listnotes")
+      .methods(crow::HTTPMethod::GET)([](const crow::request &req) {
+        std::string username;
+        if (!isHeaderVerified(req, username)) {
+          return crow::response(
+              crow::status::UNAUTHORIZED,
+              wnt::printError(wnt::ErrorCode::AUTHENTICATION_ERROR));
+        }
+
+        // Request query string validation.
+        const crow::query_string &q = req.url_params;
+        uint32_t page_size = std::stoi(q.get("page_size"));
+        uint32_t current_page = std::stoi(q.get("current_page"));
+        std::optional<std::string> search =
+            q.get("search") == nullptr ? std::nullopt
+                                       : std::make_optional(q.get("search"));
+        std::optional<std::string> sort_by =
+            q.get("sort_by") == nullptr ? std::nullopt
+                                        : std::make_optional(q.get("sort_by"));
+
+        // Get result of query.
+        auto result =
+            wnt::get_notes_list(username, page_size, current_page,
+                                std::move(search), std::move(sort_by));
+        if (std::holds_alternative<wnt::ErrorCode>(result)) {
+          wnt::ErrorCode ecode = std::get<wnt::ErrorCode>(result);
+          return crow::response(crow::status::INTERNAL_SERVER_ERROR,
+                                wnt::printError(ecode));
+        }
+        const auto &notes = std::get<std::vector<wnt::Note>>(result);
+        std::vector<crow::json::wvalue> notes_json_list;
+
+        // Convert notes to json list.
+        for (const auto &note : notes) {
+          crow::json::wvalue note_json{
+              {"id", note.id},
+              {"username", note.username},
+              {"title", note.title},
+              {"description", note.description},
+              {"creation_date", note.creation_date},
+              {"last_update_date", note.last_update_date},
+          };
+          notes_json_list.push_back(note_json);
+        }
+        return crow::response(crow::status::OK, crow::json::wvalue({
+                                                    {"notes", notes_json_list},
+                                                }));
       });
 
   // Log level is set to DEBUG.
@@ -215,10 +266,12 @@ static bool isHeaderVerified(const crow::request &req, std::string &username) {
 
   // Extract the value of Authorization header.
   const std::string &authorization_value = headers->second;
-  // This pattern expects "Bearer <token>", where <token> is a string of allowed characters.
+  // This pattern expects "Bearer <token>", where <token> is a string of allowed
+  // characters.
   std::regex bearer_scheme_regex("Bearer +([A-Za-z0-9_\\-.~+]+[=]*)");
 
-  // Attempt to match the Authorization header value with the bearer token pattern.
+  // Attempt to match the Authorization header value with the bearer token
+  // pattern.
   std::smatch match;
   if (!std::regex_match(authorization_value, match, bearer_scheme_regex)) {
     CROW_LOG_ERROR << "Request header Authorization does not contain Bearer";
@@ -230,13 +283,13 @@ static bool isHeaderVerified(const crow::request &req, std::string &username) {
   // Set up a JWT verifier.
   // The algorithm is set to HS512 and the issuer is set to WNT.
   auto verifier = jwt::verify()
-    .allow_algorithm(jwt::algorithm::hs512{"secret"})
-    .with_issuer("WNT");
+                      .allow_algorithm(jwt::algorithm::hs512{"secret"})
+                      .with_issuer("WNT");
 
   // Try to verify the token.
   // If the token is not valid, an exception will be thrown.
   try {
-  verifier.verify(decade);
+    verifier.verify(decade);
   } catch (const std::exception &e) {
     CROW_LOG_ERROR << "Failed to verify token: " << e.what();
     return false;
