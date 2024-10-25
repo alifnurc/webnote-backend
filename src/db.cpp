@@ -125,4 +125,56 @@ bool add_note(const Note &note) {
     return false;
   }
 }
+
+std::variant<std::vector<Note>, ErrorCode>
+get_notes_list(const std::string &username, uint32_t page_size,
+               uint32_t current_page, std::optional<std::string> search,
+               std::optional<std::string> sort_by) {
+  pqxx::connection c(url);
+  pqxx::read_transaction transaction(c);
+
+  try {
+    // Search user from database.
+    std::stringstream s;
+    s << "SELECT * FROM datawebnote WHERE username="
+      << transaction.quote(username);
+    if (search.has_value()) {
+      s << " AND title LIKE " << transaction.quote("%" + search.value() + "%");
+    }
+
+    std::string sort_by_val = "asc";
+    if (sort_by.has_value() && sort_by.value() == "last_update_date") {
+      sort_by_val = "desc";
+    }
+
+    // Pagination with offset and limit.
+    s << " ORDER BY last_update_date " << sort_by_val;
+    s << " OFFSET " << (page_size * (current_page - 1));
+    s << " LIMIT " << page_size;
+
+    std::string query = s.str();
+
+    // Debug query.
+    CROW_LOG_DEBUG << "Query: " + query;
+
+    // Get result of query.
+    auto result = transaction.exec(query);
+
+    // Get data and asign it to vector.
+    std::vector<Note> notes;
+    for (const auto &row : result) {
+      notes.push_back(
+          Note{.id = row["id"].as<uint64_t>(),
+               .username = row["username"].c_str(),
+               .title = row["title"].c_str(),
+               .description = row["description"].c_str(),
+               .creation_date = row["creation_date"].c_str(),
+               .last_update_date = row["last_update_date"].c_str()});
+    }
+    return notes;
+  } catch (const pqxx::unexpected_rows &e) {
+    CROW_LOG_ERROR << "Number of rows returned is not equal to 1: " << e.what();
+    return ErrorCode::INTERNAL_ERROR;
+  }
+}
 } // namespace wnt
