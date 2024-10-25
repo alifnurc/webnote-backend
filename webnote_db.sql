@@ -9,7 +9,7 @@ CREATE FUNCTION public.fn_trig_notes_id() RETURNS trigger
   LANGUAGE plpgsql
   AS $$
   BEGIN
-    new.id = (SELECT count (*) FROM notes WHERE username = new.username);
+    new.id = (SELECT count (*) FROM datawebnote WHERE username = new.username);
     RETURN new;
   END;
   $$
@@ -52,5 +52,5 @@ CREATE TRIGGER trig_notes_id
   FOR EACH ROW
   EXECUTE PROCEDURE public.fn_trig_notes_id();
 
-  ALTER TABLE ONLY public.datawebnote
+ALTER TABLE ONLY public.datawebnote
     ADD CONSTRAINT datawebnote_username_fkey FOREIGN KEY (username) REFERENCES public.userwebnote(username);
