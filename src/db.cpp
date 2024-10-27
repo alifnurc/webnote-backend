@@ -177,4 +177,36 @@ get_notes_list(const std::string &username, uint32_t page_size,
     return ErrorCode::INTERNAL_ERROR;
   }
 }
+
+bool update_note(const Note &note) {
+  pqxx::connection c(url);
+  pqxx::work transaction(c);
+
+  try {
+    std::stringstream s;
+    s << "UPDATE datawebnote SET ";
+
+    if (!note.title.empty()) {
+      s << "title=" << transaction.quote(note.title) << ',';
+    }
+    if (!note.description.empty()) {
+      s << "description=" << transaction.quote(note.description) << ',';
+    }
+
+    s << "last_update_date=now() WHERE username="
+      << transaction.quote(note.username) << " AND id=" << note.id;
+
+    auto result = transaction.exec(s.str());
+    if (result.affected_rows() != 1) { // number of rows affected.
+      CROW_LOG_ERROR << "Could not update note to database";
+      return false;
+    }
+
+    transaction.commit();
+    return true;
+  } catch (const pqxx::sql_error &e) {
+    CROW_LOG_ERROR << "Internal exception was thrown: " << e.what();
+    return false;
+  }
+}
 } // namespace wnt

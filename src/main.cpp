@@ -235,6 +235,39 @@ int main(int argc, char *argv[]) {
                                                 }));
       });
 
+  CROW_ROUTE(app, "/updatenote")
+      .methods(crow::HTTPMethod::POST)([](const crow::request &req) {
+        wnt::Note note;
+
+        if (!isHeaderVerified(req, note.username)) {
+          return crow::response(
+              crow::status::UNAUTHORIZED,
+              wnt::printError(wnt::ErrorCode::AUTHENTICATION_ERROR));
+        }
+
+        const crow::query_string &q = req.url_params;
+        const char *note_id = q.get("note_id");
+
+        if (note_id == nullptr) {
+          return crow::response(crow::status::BAD_REQUEST,
+                                "id parameter is missing or empty");
+        }
+
+        note.id = std::stoull(note_id);
+        crow::multipart::message messages(req);
+
+        // Form fields validation.
+        isStringPresent(messages, "note_title", note.title);
+        isStringPresent(messages, "note_description", note.description);
+
+        if (!wnt::update_note(note)) {
+          return crow::response(
+              crow::status::INTERNAL_SERVER_ERROR,
+              wnt::printError(wnt::ErrorCode::INTERNAL_ERROR));
+        }
+        return crow::response(crow::status::OK);
+      });
+
   // Log level is set to DEBUG.
   app.loglevel(crow::LogLevel::DEBUG);
 

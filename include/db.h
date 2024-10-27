@@ -17,4 +17,5 @@ std::variant<std::vector<Note>, ErrorCode>
 get_notes_list(const std::string &username, uint32_t page_size,
                uint32_t current_page, std::optional<std::string> search,
                std::optional<std::string> sort_by);
+bool update_note(const Note &note);
 } // namespace wnt
