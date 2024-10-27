@@ -209,4 +209,27 @@ bool update_note(const Note &note) {
     return false;
   }
 }
+
+bool delete_note(const std::string &username, uint16_t id) {
+  pqxx::connection c(url);
+  pqxx::work transaction(c);
+
+  try {
+    std::stringstream s;
+    s << "DELETE FROM datawebnote WHERE username="
+      << transaction.quote(username) << " AND id=" << id;
+
+    auto result = transaction.exec(s.str());
+    if (result.affected_rows() != 1) { // number of rows affected.
+      CROW_LOG_ERROR << "Could not delete note to database";
+      return false;
+    }
+
+    transaction.commit();
+    return true;
+  } catch (const pqxx::sql_error &e) {
+    CROW_LOG_ERROR << "Internal exception was thrown: " << e.what();
+    return false;
+  }
+}
 } // namespace wnt
